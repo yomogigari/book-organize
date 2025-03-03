@@ -85,9 +85,10 @@ make-book-list.py が生成したCSVファイルの情報に基づいてファ�
 
 options:
   -h, --help  show this help message and exit
-  --csv CSV   入力CSVファイル（必須）
-  --dir DIR   処理を行うベースディレクトリ（必須）
-  --dry-run   実際の処理を行わず、実行予定の処理を表示
+  --csv CSV    入力CSVファイル（必須）
+  --dir DIR    処理を行うベースディレクトリ（必須）
+  --dry-run    実際の処理を行わず、実行予定の処理を表示
+  --first-dir  最初の階層ディレクトリのみを使用してファイルを移動する
 
 $ python move-book.py --dir /E-book --csv book.csv --dry-run
 警告: 無効なディレクトリコード '!!' - スキップします。
