@@ -175,17 +175,6 @@ E:\E-book\ア行\
 .zip .rar .7z .tar .gz .lzh .epub .mobi .pdf .azw3
 ```
 
-## 旧コマンドとの互換性
-
-従来の `make-book-list.py` と `move-book.py` は互換用エントリーポイントとして残しています。新しい利用方法では `book-organize.py` を使用してください。
-
-互換コマンドを実行する場合もuv経由で実行できます。
-
-```powershell
-uv run make-book-list.py --dir E:\E-book --out book-list.csv
-uv run move-book.py --dir E:\E-book --csv book-list.csv --dry-run
-```
-
 ## 開発時のテスト
 
 全テストは次のコマンドで実行します。

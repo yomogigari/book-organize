@@ -1,20 +1,7 @@
 # !/usr/bin/env python
 # coding: utf-8
-"""
-make-book-list.py が生成したCSVファイルの情報に基づいてファイルを移動するツール
-
-usage:
-  python move-book.py --csv CSV --dir DIR [--dry-run] [--first-dir]
-
-オプション:
-  --csv       入力CSVファイル（必須）
-  --dir       処理を行うベースディレクトリ（必須）
-  --dry-run   実際の処理を行わず、実行予定の処理を表示
-  --first-dir 最初の階層ディレクトリのみを使用してファイルを移動する
-"""
-import os
+"""分類情報に基づいて電子書籍ファイルを整理用ディレクトリへ移動する。"""
 import sys
-import argparse
 import csv
 import re
 from pathlib import Path
@@ -86,33 +73,3 @@ def read_csv_rows(csv_path):
     """UTF-8の分類用CSVを読み込む。"""
     with open(csv_path, 'r', encoding='utf-8') as f:
         return list(csv.reader(f))
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        description='make-book-list.py が生成したCSVファイルの情報に基づいてファイルを移動するツール',
-        formatter_class=argparse.RawTextHelpFormatter
-    )
-    parser.add_argument('--csv', type=str, required=True, help='入力CSVファイル（必須）')
-    parser.add_argument('--dir', type=str, required=True, help='処理を行うベースディレクトリ（必須）')
-    parser.add_argument('--dry-run', action='store_true', help='実際の処理を行わず、実行予定の処理を表示')
-    parser.add_argument('--first-dir', action='store_true',
-                        help='最初の階層ディレクトリのみを使用してファイルを移動する')
-
-    args = parser.parse_args()
-
-    # ベースディレクトリの存在確認
-    if not os.path.isdir(args.dir):
-        print(f"エラー: 指定されたディレクトリが存在しません: {args.dir}", file=sys.stderr)
-        sys.exit(1)
-
-    try:
-        rows = read_csv_rows(args.csv)
-        process_rows(rows, args.dir, dry_run=args.dry_run, first_dir=args.first_dir)
-    except Exception as e:
-        print(f"エラー: {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

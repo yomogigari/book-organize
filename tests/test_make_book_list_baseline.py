@@ -1,8 +1,7 @@
-"""現行 make-book-list.py の主要な変換規則を固定するテスト。"""
+"""作者名と読みの主要な変換規則を固定するテスト。"""
 
 from __future__ import annotations
 
-import importlib.util
 import sys
 import types
 import unittest
@@ -10,7 +9,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "make-book-list.py"
+SRC = ROOT / "src"
 
 
 def load_script():
@@ -22,11 +21,11 @@ def load_script():
     previous = sys.modules.get("sudachipy")
     sys.modules["sudachipy"] = fake_sudachi
     try:
-        spec = importlib.util.spec_from_file_location("make_book_list", SCRIPT)
-        assert spec is not None and spec.loader is not None
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        return module
+        if str(SRC) not in sys.path:
+            sys.path.insert(0, str(SRC))
+        from book_organize import make_book_list
+
+        return make_book_list
     finally:
         if previous is None:
             sys.modules.pop("sudachipy", None)

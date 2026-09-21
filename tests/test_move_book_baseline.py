@@ -1,25 +1,25 @@
-"""現行 move-book.py の移動先決定規則を固定するテスト。"""
+"""ファイル移動先の決定規則を固定するテスト。"""
 
 from __future__ import annotations
 
 import contextlib
-import importlib.util
 import io
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "move-book.py"
+SRC = ROOT / "src"
 
 
 def load_script():
-    spec = importlib.util.spec_from_file_location("move_book", SCRIPT)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    if str(SRC) not in sys.path:
+        sys.path.insert(0, str(SRC))
+    from book_organize import move_book
+
+    return move_book
 
 
 class MoveBookBaselineTest(unittest.TestCase):

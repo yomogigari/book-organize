@@ -1,24 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
-"""
-SudachiPyを用いたファイル名処理スクリプト
-
-usage:
-  python make-book-list.py [--dir DIRECTORY] [--out OUTPUTFILE]
-
-オプション:
-  --dir    対象ディレクトリ。指定がなければ起動ディレクトリを利用
-  --short  短縮形式で出力
-  --out    出力先ファイル名。指定がなければ標準出力へ出力
-"""
+"""電子書籍ファイル名から作者名と分類情報を生成する。"""
 import os
 import sys
-import argparse
 import re
 import unicodedata
 from sudachipy import dictionary, tokenizer
 
-from .reading_dictionary import ReadingDictionaryError, load_reading_dictionary
 
 # 対象ファイルの拡張子リスト（小文字で比較）
 TARGET_EXTENSIONS = {'.zip', '.rar', '.7z', '.tar', '.gz', '.lzh',
@@ -89,17 +77,16 @@ def get_kana_group(ch: str) -> str:
     return ch
 
 def is_katakana(text: str) -> bool:
-    """
-    文字列がすべてカタカナであるかチェックする
-    """
-    return all(unicodedata.name(ch).startswith('KATAKANA') for ch in text)
+    """文字列がすべてカタカナとして扱える文字で構成されているか確認する。"""
+    return all(unicodedata.name(ch, "").startswith("KATAKANA") for ch in text)
+
+
+def is_complete_katakana_reading(text: str) -> bool:
+    """読みが空でなく、未変換文字を含まないカタカナだけか確認する。"""
+    return bool(text) and is_katakana(text)
 
 def build_group_string(kana_text: str, raw_kana: str) -> str:
-    """
-    カタカナ表記の先頭2文字それぞれをグループ代表に置き換え、連結する。
-    raw_kanaにカタカナ以外の文字が含まれている場合は "!!" を返す。
-    例：'キヨ' → 'カ' + 'ヤ' = 'カヤ'
-    """
+    """カタカナ表記の先頭2文字を50音の行へ置き換えて連結する。"""
     if not kana_text:
         return ""
 
@@ -178,9 +165,11 @@ def build_book_list_rows(target_dir, short=False, reading_dict=None):
         else:
             raw_kana, normalized_kana = ("!!", "!!")
         head2 = normalized_kana[:2]
-        group_str = build_group_string(normalized_kana, raw_kana)
-
-        if group_str and not is_katakana(group_str):
+        if is_complete_katakana_reading(normalized_kana):
+            group_str = build_group_string(normalized_kana, raw_kana)
+            if group_str and not is_katakana(group_str):
+                group_str = "!!"
+        else:
             group_str = "!!"
 
         if short:
@@ -213,49 +202,3 @@ def write_csv_rows(rows, output_path=None):
             f_out.write(output_text)
     else:
         print(output_text)
-
-
-def main():
-    try:
-        parser = argparse.ArgumentParser(
-            description="SudachiPy を用いてファイル名から抽出した文字列のカタカナ表記および変換情報を出力します。カタカナ表記に変更できない場合は!!を出力します。"
-        )
-        parser.add_argument('--dir', type=str, default=os.getcwd(), help='対象ディレクトリ。指定がなければ起動ディレクトリを使用')
-        parser.add_argument("--short", action="store_true", help="短縮形式で出力")
-        parser.add_argument('--out', type=str, help='出力先ファイル名。指定がなければ標準出力に出力')
-        parser.add_argument('--reading-dict', type=str, help='作者名と読みを2列で記述した簡易CSV辞書')
-        args = parser.parse_args()
-
-        if hasattr(sys.stdout, "reconfigure"):
-            sys.stdout.reconfigure(encoding='utf-8')
-
-        try:
-            reading_dict = (
-                load_reading_dictionary(args.reading_dict) if args.reading_dict else None
-            )
-            output_rows = build_book_list_rows(
-                args.dir,
-                short=args.short,
-                reading_dict=reading_dict,
-            )
-        except NotADirectoryError:
-            print(f"エラー: 指定されたディレクトリ '{args.dir}' は存在しません。", file=sys.stderr)
-            sys.exit(1)
-        except ReadingDictionaryError as e:
-            print(f"読み辞書エラー: {str(e)}", file=sys.stderr)
-            sys.exit(1)
-        except Exception as e:
-            print(f"ディレクトリ読み込みエラー: {str(e)}", file=sys.stderr)
-            sys.exit(1)
-
-        try:
-            write_csv_rows(output_rows, args.out)
-        except Exception as e:
-            print(f"出力ファイル書き込みエラー: {str(e)}", file=sys.stderr)
-            sys.exit(1)
-    except Exception as e:
-        print(f"予期しないエラー: {str(e)}", file=sys.stderr)
-        sys.exit(1)
-
-if __name__ == '__main__':
-    main()
