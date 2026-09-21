@@ -4,6 +4,14 @@
 
 作者名の読みは SudachiPy と SudachiDict-full で取得します。SudachiPyの結果を補正したい場合は、作者名と読みを記述した簡易CSV辞書を指定できます。
 
+## Windows版
+
+Windows向けの公開配布では、Nuitka onefile形式の `book-organize.exe` を使用します。Windows版EXEを使用する場合、Pythonやuvを別にインストールする必要はありません。
+
+EXEは初回実行時にSudachiDict-fullなどをユーザーキャッシュへ展開します。展開先は通常 `%LOCALAPPDATA%\book-organize\v1.0` です。
+
+v1.0の検証ビルドでは、キャッシュ全体が約377 MBになりました。ビルド内容によって変わる可能性があるため、Windows版を使用する場合は400 MB程度の空き容量を見込んでください。
+
 ## 動作環境
 
 - Python 3.12
@@ -185,6 +193,14 @@ E:\E-book\ア行\
 .zip .rar .7z .tar .gz .lzh .epub .mobi .pdf .azw3
 ```
 
+## 公開版の入手
+
+Windows版はGitHub Releaseの `book-organize-v1.0-windows-x64.zip` を使用します。ZIPには `book-organize.exe`、README、CHANGELOG、ライセンス文書、`SHA256SUMS.txt` を含めます。
+
+Python版を使用する場合は、リポジトリを取得して `uv sync` を実行してください。
+
+Windows版に含まれる第三者ソフトウェアの概要は [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) を参照してください。
+
 ## 開発時のテスト
 
 全テストは次のコマンドで実行します。
@@ -213,4 +229,6 @@ Windows standalone EXEのビルドツールは、このリポジトリの `tools
 
 ## ライセンス
 
-ライセンスは [LICENSE](LICENSE) を参照してください。
+`book-organize` 本体のライセンスは [LICENSE](LICENSE) を参照してください。
+
+Windows版に含まれる第三者ソフトウェアについては、[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) を参照してください。公開用ZIPには、再配布する第三者コンポーネントのライセンス本文も同梱します。
