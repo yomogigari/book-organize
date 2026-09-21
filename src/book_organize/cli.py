@@ -17,8 +17,15 @@ from .reading_dictionary import ReadingDictionaryError, load_reading_dictionary
 def create_parser() -> argparse.ArgumentParser:
     """統合CLIの引数パーサーを作成する。"""
     parser = argparse.ArgumentParser(
-        prog="book-organize",
+        prog="book-organize.py",
         description="電子書籍ファイルを作者名の読みに基づいて分類・整理します。",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "実行例:\n"
+            "  uv run book-organize.py run --dir E:\\E-book --dry-run\n"
+            "  uv run book-organize.py list --dir E:\\E-book --out book-list.csv\n"
+            "  uv run book-organize.py move --dir E:\\E-book --csv book-list.csv --dry-run"
+        ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -26,6 +33,13 @@ def create_parser() -> argparse.ArgumentParser:
         "list",
         help="分類用の一覧を生成します。",
         description="ファイル名から作者名の読みを生成し、分類用のCSVを出力します。",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "実行例:\n"
+            "  uv run book-organize.py list --dir E:\\E-book --out book-list.csv\n"
+            "  uv run book-organize.py list --dir E:\\E-book "
+            "--reading-dict author-readings.csv --out book-list.csv"
+        ),
     )
     list_parser.add_argument(
         "--dir",
@@ -45,6 +59,12 @@ def create_parser() -> argparse.ArgumentParser:
         "move",
         help="CSVに従ってファイルを移動します。",
         description="分類用CSVの情報に基づいてファイルを移動します。",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "実行例:\n"
+            "  uv run book-organize.py move --dir E:\\E-book "
+            "--csv book-list.csv --dry-run"
+        ),
     )
     move_parser.add_argument("--csv", type=str, required=True, help="入力CSVファイル（必須）")
     move_parser.add_argument(
@@ -60,6 +80,13 @@ def create_parser() -> argparse.ArgumentParser:
         help="一覧生成とファイル移動を続けて実行します。",
         description=(
             "対象ディレクトリから分類情報を生成し、その結果を使ってファイルを移動します。"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "実行例:\n"
+            "  uv run book-organize.py run --dir E:\\E-book --dry-run\n"
+            "  uv run book-organize.py run --dir E:\\E-book "
+            "--reading-dict author-readings.csv --dry-run"
         ),
     )
     run_parser.add_argument(

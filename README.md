@@ -1,129 +1,203 @@
-# make-book-list.py, move-book.py
+# book-organize
 
-電子書籍ファイルを自動分類するためのCSVデータの生成ツール(make-book-list.py)と、生成データを用いたファイルの移動ツール(move-book.py)。
+`book-organize` は、電子書籍ファイルのファイル名から作者名を抽出し、作者名の読みに基づいて整理用ディレクトリへ移動するCLIツールです。
 
-電子書籍のファイル名から著者名と思われる部分を抽出し、カタカナに変換後に利用しやすいよう成形しCSVデータを作成します。
-その後CSVデータをもとにディレクトリの作成と電子書籍ファイルの移動をおこないます。
+作者名の読みは SudachiPy と SudachiDict-full で取得します。SudachiPyの結果を補正したい場合は、作者名と読みを記述した簡易CSV辞書を指定できます。
 
-Python はあまりわかっていないので習作です。整理してライブラリ化したいですが、どうなることやら…
+## 動作環境
 
-## 導入
+- Python 3.12
+- [uv](https://docs.astral.sh/uv/)
+- SudachiPy 0.6.11
+- SudachiDict-full 20260723
 
-作者名のカタカナ変換は日本語形態素解析器の Sudachi の Python 実装である [SudachiPy](https://github.com/WorksApplications/SudachiPy/blob/develop/docs/tutorial.md) と辞書である [SudachiDict-full](https://pypi.org/project/SudachiDict-full/) を利用しています。
-素晴らしいツールを公開してくださったワークス徳島人工知能NLP研究所様に感謝申し上げます。
+依存関係は `pyproject.toml` と `uv.lock` で管理しています。
 
-
-
-以下のコマンドで導入してください。
-
-```bash
-pip install sudachipy
-pip install sudachidict_full
+```powershell
+uv sync
 ```
 
-## 使用例
+## ファイルを移動する前の確認
 
-make-book-list.py で分類用のCSVデータを作成し、そのCSVデータを用いて move-book.py でファイル移動をおこないます。
+`run` と `move` は電子書籍ファイルを別のディレクトリへ移動します。最初に `--dry-run` を指定し、移動先を確認してください。
 
-### CSVデータ作成
+ファイルのバックアップが必要な場合は、実際の移動を行う前に作成してください。
 
-make-book-list.py を起動すると指定ディレクトリ内のファイル名一覧を読み込み、著者名と思われる文字列を切り出します。
-切り出しはファイル名から半角の [と] に囲まれた文字列を切り出し、文字列内に'×'が含まれる場合はその前まで抽出します。
-アルファベットはそのまま切りだし半角化をおこないます。
+## 基本的な使い方
 
-その後 SudachiPy で著者名のカタカナ変換をおこないます。変換後は濁音・半濁音・拗音・促音を清音に正規化し、先頭2文字を50音表の行ごとに分類した文字を移動先のディレクトリ名作成用情報として生成します。
+ヘルプは次のコマンドで確認できます。
 
-
-変換結果のCSVは1列目が移動先のディレクトリ名作成用情報、変換経緯の情報が続き最終列がファイル名です。
-
-カタカナ変換ができなかった場合、1列目は'!!'となりますので必要に応じて Sudachi のユーザー辞書登録、CSVデータ内'!!'部分の手動でのカナ記入などをおこなってください。
-
-
-```bash
-$ python make-book-list.py -h
-usage: make-book-list.py [-h] [--dir DIR] [--short] [--out OUT]
-
-SudachiPy を用いてファイル名から抽出した文字列のカタカナ表記および変換情報を出力します。カタカナ表記に変更できない場合は!!を出力します。
-
-options:
-  -h, --help  show this help message and exit
-  --dir DIR   対象ディレクトリ。指定がなければ起動ディレクトリを使用
-  --short     短縮形式で出力
-  --out OUT   出力先ファイル名。指定がなければ標準出力に出力
-
-$ ls -l /E-book
-合計 119M
--rw-r--r-- 1 m-kim m-kim  29M  8月 18  2022 (一般コミック) [A-01] ももたろう .zip
--rw-r--r-- 1 m-kim m-kim  67M  2月 18 11:54 (一般コミック) [蓬がり×よもーぎ] サンプル 第01巻.zip
--rw-r--r-- 1 m-kim m-kim  24M  3月 13  2017 [香月　美夜] 本好きの下剋上　～司書になるためには手段を選んでいられません～.mobi
--rw-r--r-- 1 m-kim m-kim 177K  2月 18 09:49 [明石六郎] ヒールが使えないソロヒーラー、女尊男卑世界へ帰還す.epub
-
-$ python make-book-list.py --dir /E-book --out book.csv
-
-$ cat book.csv
-!!,a-,a-レイイチ,a-レイイチ,A-01,(一般コミック) [A-01] ももたろう .zip
-アカ,アカ,アカシロクロウ,アカシロクロウ,明石六郎,[明石六郎] ヒールが使えないソロヒーラー、女尊男卑世界へ帰還す.epub
-カタ,カツ,カツキキコウミヤ,カツキキゴウミヤ,香月 美夜,[香月　美夜] 本好きの下剋上　～司書になるためには手段を選んでいら れません～.mobi
-ヤマ,ヨモ,ヨモキカリ,ヨモギガリ,蓬がり,(一般コミック) [蓬がり×よもーぎ] サンプル 第01巻.zip
+```powershell
+uv run book-organize.py -h
 ```
 
-### ファイル移動
+統合CLIには `run`、`list`、`move` の3つのサブコマンドがあります。
 
+### 一覧生成と移動を続けて実行する
 
-make-book-list.py で作成したCSVファイルと処理ディレクトリを指定するとCSVファイルの内容に従いディレクトリの作成とファイル移動をおこないます。
-CSVの1列目が'!!'のレコードはファイル移動はおこないません。
+通常は `run` を使用します。最初に `--dry-run` で移動予定を確認します。
 
- --dry-run は実際のディスク操作はおこなわずに処理内容を出力します。
-
-私の環境では問題ありませんでしたが、何らかの不具合でファイルが破損する可能性もないとは言えませんので --dry-run で処理内容を確認の上、ファイルのバックアップを作成した上でご利用ください。
-
-```bash
-$ python move-book.py -h
-usage: move-book.py [-h] [--csv CSV] --dir DIR [--dry-run]
-
-make-book-list.py が生成したCSVファイルの情報に基づいてファイルを移動するツール
-
-options:
-  -h, --help  show this help message and exit
-  --csv CSV    入力CSVファイル（必須）
-  --dir DIR    処理を行うベースディレクトリ（必須）
-  --dry-run    実際の処理を行わず、実行予定の処理を表示
-  --first-dir  最初の階層ディレクトリのみを使用してファイルを移動する
-
-$ python move-book.py --dir /E-book --csv book.csv --dry-run
-警告: 無効なディレクトリコード '!!' - スキップします。
-mkdir -p /E-book/ア行/アカ
-mv /E-book/[明石六郎] ヒールが使えないソロヒーラー、女尊男卑世界へ帰還す.epub /E-book/ア行/アカ/[明石六郎] ヒールが使えないソロヒーラー、女尊男卑世界へ帰還す.epub
-mkdir -p /E-book/カ行/カタ
-mv /E-book/[香月　美夜] 本好きの下剋上　～司書になるためには手段を選んでいられません～.mobi /E-book/カ行/カタ/[香月　美夜] 本好きの下剋上　～司書になるためには手段を選んでいられません～.mobi
-mkdir -p /E-book/ヤ行/ヤマ
-mv /E-book/(一般コミック) [蓬がり×よもーぎ] サンプル 第01巻.zip /E-book/ヤ行/ヤマ/(一般コミック) [蓬がり×よもーぎ] サンプル 第01巻.zip
-
-$ python move-book.py --dir /E-book --csv book.csv
-警告: 無効なディレクトリコード '!!' - スキップします。
-移動完了: [明石六郎] ヒールが使えないソロヒーラー、女尊男卑世界へ帰還す.epub -> /E-book/ア行/アカ
-移動完了: [香月　美夜] 本好きの下剋上　～司書になるためには手段を選んでいられません～.mobi -> /E-book/カ行/カタ
-移動完了: (一般コミック) [蓬がり×よもーぎ] サンプル 第01巻.zip -> /E-book/ヤ行/ヤマ
-
-$ cd /E-book; ls -R
-.:
-(一般コミック) [A-01] ももたろう .zip   ア行/   カ行/   ヤ行/
-
-./ア行:
-アカ/
-
-./ア行/アカ:
-[明石六郎] ヒールが使えないソロヒーラー、女尊男卑世界へ帰還す.epub
-
-./カ行:
-カタ/
-
-./カ行/カタ:
-[香月　美夜] 本好きの下剋上　～司書になるためには手段を選んでいられません～.mobi
-
-./ヤ行:
-ヤマ/
-
-./ヤ行/ヤマ:
-(一般コミック) [蓬がり×よもーぎ] サンプル 第01巻.zip
+```powershell
+uv run book-organize.py run --dir E:\E-book --dry-run
 ```
+
+内容に問題がなければ、`--dry-run` を外して実行します。
+
+```powershell
+uv run book-organize.py run --dir E:\E-book
+```
+
+生成した分類情報をCSVにも保存する場合は `--out` を指定します。
+
+```powershell
+uv run book-organize.py run --dir E:\E-book --out book-list.csv --dry-run
+```
+
+### 分類用CSVだけを生成する
+
+`list` はファイルを移動せず、分類情報を生成します。
+
+```powershell
+uv run book-organize.py list --dir E:\E-book --out book-list.csv
+```
+
+`--out` を指定しない場合は標準出力へ出力します。
+
+```powershell
+uv run book-organize.py list --dir E:\E-book
+```
+
+`--short` を指定すると、移動先の分類コードとファイル名だけを出力します。
+
+```powershell
+uv run book-organize.py list --dir E:\E-book --short --out book-list.csv
+```
+
+### 既存のCSVに従って移動する
+
+`move` は `list` で生成したCSVを読み込み、ファイルを移動します。
+
+```powershell
+uv run book-organize.py move --dir E:\E-book --csv book-list.csv --dry-run
+```
+
+移動予定に問題がなければ、`--dry-run` を外します。
+
+```powershell
+uv run book-organize.py move --dir E:\E-book --csv book-list.csv
+```
+
+## 簡易読み辞書
+
+SudachiPyで期待した読みを取得できない作者名や、SudachiPyの結果より優先したい読みがある場合は、`--reading-dict` で簡易CSV辞書を指定できます。
+
+辞書はヘッダーなしの2列CSVです。1列目に作者名、2列目に読みをカタカナで記述します。
+
+```csv
+蓬がり,ヨモギガリ
+特殊な作者名,トクシュナサクシャメイ
+```
+
+UTF-8とUTF-8 BOM付きCSVを読み込めます。空行は無視します。同じ作者名を複数回登録した場合や、2列以外の行がある場合はエラーになります。
+
+作者名はファイル名から抽出した後にNFKCで正規化して比較します。辞書に一致した作者名は、SudachiPyで解析せず辞書の読みを使用します。
+
+```powershell
+uv run book-organize.py list --dir E:\E-book --reading-dict author-readings.csv --out book-list.csv
+```
+
+`run` でも同じ辞書を使用できます。
+
+```powershell
+uv run book-organize.py run --dir E:\E-book --reading-dict author-readings.csv --dry-run
+```
+
+## 作者名の抽出規則
+
+ファイル名に半角の `[` と `]` で囲まれた文字列がある場合、その最初の文字列を作者名として扱います。
+
+```text
+[蓬がり] サンプル.epub
+```
+
+作者名に `×` が含まれる場合は、`×` より前だけを使用します。
+
+```text
+[蓬がり×よもーぎ] サンプル.epub
+```
+
+この場合、作者名は `蓬がり` です。
+
+抽出した作者名はNFKCで正規化します。作者名を抽出できない場合は分類コードを `!!` とし、移動対象から除外します。
+
+## 分類方法
+
+作者名の読みをカタカナへ変換した後、濁音・半濁音・拗音・促音などを分類用に正規化します。先頭2文字を50音の行へ置き換えた2文字を分類コードとして使用します。
+
+たとえば分類コードが `アカ` の場合、通常は次のディレクトリへ移動します。
+
+```text
+E:\E-book\ア行\アカ\
+```
+
+`--first-dir` を指定すると、1階層目だけを使用します。
+
+```powershell
+uv run book-organize.py run --dir E:\E-book --first-dir --dry-run
+```
+
+この場合の移動先は次の形式です。
+
+```text
+E:\E-book\ア行\
+```
+
+## CSVの内容
+
+通常の `list` は次の6列を出力します。
+
+1. 分類コード
+2. 正規化後の読みの先頭2文字
+3. 分類用に正規化した読み
+4. SudachiPyまたは簡易読み辞書から取得した読み
+5. ファイル名から抽出した作者名
+6. ファイル名
+
+`--short` を指定した場合は、分類コードとファイル名の2列です。
+
+分類コードが `!!` の行は、`run` と `move` で移動しません。
+
+## 対応するファイル拡張子
+
+現在は次の拡張子を分類対象とします。大文字と小文字は区別しません。
+
+```text
+.zip .rar .7z .tar .gz .lzh .epub .mobi .pdf .azw3
+```
+
+## 旧コマンドとの互換性
+
+従来の `make-book-list.py` と `move-book.py` は互換用エントリーポイントとして残しています。新しい利用方法では `book-organize.py` を使用してください。
+
+互換コマンドを実行する場合もuv経由で実行できます。
+
+```powershell
+uv run make-book-list.py --dir E:\E-book --out book-list.csv
+uv run move-book.py --dir E:\E-book --csv book-list.csv --dry-run
+```
+
+## 開発時のテスト
+
+全テストは次のコマンドで実行します。
+
+```powershell
+uv run python -m unittest discover -s tests -v
+```
+
+## 使用ライブラリ
+
+作者名の読みの取得には [SudachiPy](https://github.com/WorksApplications/SudachiPy) と [SudachiDict-full](https://pypi.org/project/SudachiDict-full/) を使用しています。
+
+## ライセンス
+
+ライセンスは [LICENSE](LICENSE) を参照してください。
