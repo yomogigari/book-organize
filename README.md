@@ -193,6 +193,20 @@ E:\E-book\ア行\
 uv run python -m unittest discover -s tests -v
 ```
 
+## Windows EXEをビルドする
+
+Windows standalone EXEのビルドツールは、このリポジトリの `tools\windows-build` で管理しています。
+
+リポジトリルートから次のコマンドを実行します。
+
+```powershell
+.\tools\windows-build\build-windows-exe.ps1
+```
+
+ビルドツールはNuitka 4.2.1とMinGW64を使用し、SudachiPyとSudachiDict-fullを含むstandalone配布物を生成します。ビルド後はPython版とEXE版の分類結果も自動比較します。
+
+詳細は `tools\windows-build\README.md` を参照してください。
+
 ## 使用ライブラリ
 
 作者名の読みの取得には [SudachiPy](https://github.com/WorksApplications/SudachiPy) と [SudachiDict-full](https://pypi.org/project/SudachiDict-full/) を使用しています。
