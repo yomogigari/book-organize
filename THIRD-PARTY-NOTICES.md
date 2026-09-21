@@ -43,3 +43,13 @@ Windows EXEのビルドにはNuitka 4.2.1を使用します。Nuitkaは通常の
 - Website: https://nuitka.net/
 
 Nuitkaで生成したWindows EXEには、`book-organize` が実行時に必要とするPythonランタイムと依存パッケージを含めます。
+
+## Windows Release ZIPに同梱するライセンス本文
+
+Windows向けRelease ZIPでは、再配布する実行時コンポーネントのライセンス本文を `third-party-licenses` ディレクトリへ同梱します。
+
+- `Python-3.12-LICENSE.txt`: Windows EXEに含まれるCPython 3.12系ランタイム
+- `Apache-2.0.txt`: SudachiPy 0.6.11とSudachiDict-full 20260723
+- `SudachiDict-full-LEGAL.txt`: SudachiDict-fullに含まれるUniDicとNEologd由来データの条件
+
+Nuitka 4.2.1はビルド時に使用しますが、Release ZIPにはNuitka本体を含めません。
