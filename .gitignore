@@ -29,3 +29,6 @@ Desktop.ini
 
 # ローカル生成物
 /book.csv
+
+# Local author reading corrections
+author-readings.csv

@@ -103,6 +103,15 @@ def create_parser() -> argparse.ArgumentParser:
     )
     _add_reading_dictionary_option(run_parser)
     _add_move_options(run_parser)
+    # ルートヘルプでも各サブコマンドの全オプションを確認できるよう、
+    # 個別パーサーが生成するヘルプをそのまま再利用する。
+    parser.epilog = (
+        "サブコマンド別の完全なヘルプ:\n\n"
+        f"--- run ---\n{run_parser.format_help()}\n"
+        f"--- list ---\n{list_parser.format_help()}\n"
+        f"--- move ---\n{move_parser.format_help()}"
+    )
+
     return parser
 
 

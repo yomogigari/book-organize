@@ -31,6 +31,14 @@ uv sync
 uv run book-organize.py -h
 ```
 
+ルートヘルプには `run`、`list`、`move` の全オプションもまとめて表示します。各サブコマンドだけを確認する場合は、次のコマンドを使用します。
+
+```powershell
+uv run book-organize.py run -h
+uv run book-organize.py list -h
+uv run book-organize.py move -h
+```
+
 統合CLIには `run`、`list`、`move` の3つのサブコマンドがあります。
 
 ### 一覧生成と移動を続けて実行する
@@ -99,6 +107,8 @@ SudachiPyで期待した読みを取得できない作者名や、SudachiPyの�
 ```
 
 UTF-8とUTF-8 BOM付きCSVを読み込めます。空行は無視します。同じ作者名を複数回登録した場合や、2列以外の行がある場合はエラーになります。
+
+既定のファイル名 `author-readings.csv` は利用環境ごとの補正内容を保存するローカルファイルとして扱い、Gitの管理対象には含めません。
 
 作者名はファイル名から抽出した後にNFKCで正規化して比較します。辞書に一致した作者名は、SudachiPyで解析せず辞書の読みを使用します。
 
