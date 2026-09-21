@@ -11,6 +11,7 @@ from collections.abc import Sequence
 
 from .make_book_list import build_book_list_rows, write_csv_rows
 from .move_book import process_rows, read_csv_rows
+from .reading_dictionary import ReadingDictionaryError, load_reading_dictionary
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -38,6 +39,7 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         help="出力先ファイル名。指定がなければ標準出力に出力",
     )
+    _add_reading_dictionary_option(list_parser)
 
     move_parser = subparsers.add_parser(
         "move",
@@ -72,8 +74,18 @@ def create_parser() -> argparse.ArgumentParser:
         type=str,
         help="生成した分類用CSVの保存先。指定しない場合は保存しない",
     )
+    _add_reading_dictionary_option(run_parser)
     _add_move_options(run_parser)
     return parser
+
+
+def _add_reading_dictionary_option(parser: argparse.ArgumentParser) -> None:
+    """作者名の読み補正に使う簡易CSV辞書のオプションを追加する。"""
+    parser.add_argument(
+        "--reading-dict",
+        type=str,
+        help="作者名と読みを2列で記述した簡易CSV辞書",
+    )
 
 
 def _add_move_options(parser: argparse.ArgumentParser) -> None:
@@ -98,8 +110,23 @@ def _configure_utf8_output() -> None:
         sys.stderr.reconfigure(encoding="utf-8")
 
 
+def _load_optional_reading_dictionary(path: str | None) -> dict[str, str] | None:
+    """指定されている場合だけ簡易読み辞書を読み込む。"""
+    if not path:
+        return None
+    return load_reading_dictionary(path)
+
+
 def _run_list(args: argparse.Namespace) -> int:
-    rows = build_book_list_rows(args.dir, short=args.short)
+    reading_dict = _load_optional_reading_dictionary(args.reading_dict)
+    if reading_dict is None:
+        rows = build_book_list_rows(args.dir, short=args.short)
+    else:
+        rows = build_book_list_rows(
+            args.dir,
+            short=args.short,
+            reading_dict=reading_dict,
+        )
     write_csv_rows(rows, args.out)
     return 0
 
@@ -115,7 +142,15 @@ def _run_move(args: argparse.Namespace) -> int:
 
 
 def _run_combined(args: argparse.Namespace) -> int:
-    rows = build_book_list_rows(args.dir, short=args.short)
+    reading_dict = _load_optional_reading_dictionary(args.reading_dict)
+    if reading_dict is None:
+        rows = build_book_list_rows(args.dir, short=args.short)
+    else:
+        rows = build_book_list_rows(
+            args.dir,
+            short=args.short,
+            reading_dict=reading_dict,
+        )
     if args.out:
         write_csv_rows(rows, args.out)
     process_rows(rows, args.dir, dry_run=args.dry_run, first_dir=args.first_dir)
@@ -137,6 +172,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _run_combined(args)
     except NotADirectoryError as exc:
         print(f"エラー: {exc}", file=sys.stderr)
+        return 1
+    except ReadingDictionaryError as exc:
+        print(f"読み辞書エラー: {exc}", file=sys.stderr)
         return 1
     except OSError as exc:
         print(f"ファイル処理エラー: {exc}", file=sys.stderr)

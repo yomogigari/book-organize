@@ -18,6 +18,8 @@ import re
 import unicodedata
 from sudachipy import dictionary, tokenizer
 
+from .reading_dictionary import ReadingDictionaryError, load_reading_dictionary
+
 # 対象ファイルの拡張子リスト（小文字で比較）
 TARGET_EXTENSIONS = {'.zip', '.rar', '.7z', '.tar', '.gz', '.lzh',
                      '.epub', '.mobi', '.pdf', '.azw3'}
@@ -125,7 +127,7 @@ def extract_name(filename: str) -> str:
     else:
         return "!!"
 
-def build_book_list_rows(target_dir, short=False):
+def build_book_list_rows(target_dir, short=False, reading_dict=None):
     """対象ディレクトリを走査し、従来CSVと同じ内容の行を返す。"""
     if not os.path.isdir(target_dir):
         raise NotADirectoryError(f"指定されたディレクトリ '{target_dir}' は存在しません。")
@@ -147,18 +149,27 @@ def build_book_list_rows(target_dir, short=False):
         if extracted != "!!":
             names_to_process.add(extracted)
 
-    sudachi_tokenizer = dictionary.Dictionary(dict="full").create()
-    mode = tokenizer.Tokenizer.SplitMode.C
+    reading_dict = reading_dict or {}
+    names_for_sudachi = names_to_process.difference(reading_dict)
 
     for name in names_to_process:
-        try:
-            tokens = sudachi_tokenizer.tokenize(name, mode)
-            raw_kana = "".join(token.reading_form() for token in tokens)
-        except Exception as e:
-            print(f"Sudachi解析エラー '{name}': {str(e)}", file=sys.stderr)
-            raw_kana = ""
-        normalized_kana = normalize_katakana(raw_kana)
-        sudachi_cache[name] = (raw_kana, normalized_kana)
+        if name in reading_dict:
+            raw_kana = reading_dict[name]
+            sudachi_cache[name] = (raw_kana, normalize_katakana(raw_kana))
+
+    if names_for_sudachi:
+        sudachi_tokenizer = dictionary.Dictionary(dict="full").create()
+        mode = tokenizer.Tokenizer.SplitMode.C
+
+        for name in names_for_sudachi:
+            try:
+                tokens = sudachi_tokenizer.tokenize(name, mode)
+                raw_kana = "".join(token.reading_form() for token in tokens)
+            except Exception as e:
+                print(f"Sudachi解析エラー '{name}': {str(e)}", file=sys.stderr)
+                raw_kana = ""
+            normalized_kana = normalize_katakana(raw_kana)
+            sudachi_cache[name] = (raw_kana, normalized_kana)
 
     output_rows = []
     for extracted, fname in file_info_list:
@@ -212,15 +223,26 @@ def main():
         parser.add_argument('--dir', type=str, default=os.getcwd(), help='対象ディレクトリ。指定がなければ起動ディレクトリを使用')
         parser.add_argument("--short", action="store_true", help="短縮形式で出力")
         parser.add_argument('--out', type=str, help='出力先ファイル名。指定がなければ標準出力に出力')
+        parser.add_argument('--reading-dict', type=str, help='作者名と読みを2列で記述した簡易CSV辞書')
         args = parser.parse_args()
 
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding='utf-8')
 
         try:
-            output_rows = build_book_list_rows(args.dir, short=args.short)
+            reading_dict = (
+                load_reading_dictionary(args.reading_dict) if args.reading_dict else None
+            )
+            output_rows = build_book_list_rows(
+                args.dir,
+                short=args.short,
+                reading_dict=reading_dict,
+            )
         except NotADirectoryError:
             print(f"エラー: 指定されたディレクトリ '{args.dir}' は存在しません。", file=sys.stderr)
+            sys.exit(1)
+        except ReadingDictionaryError as e:
+            print(f"読み辞書エラー: {str(e)}", file=sys.stderr)
             sys.exit(1)
         except Exception as e:
             print(f"ディレクトリ読み込みエラー: {str(e)}", file=sys.stderr)
