@@ -47,7 +47,7 @@ class DocumentationR05Test(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
         self.assertIn("--reading-dict", readme)
-        self.assertIn("蓬がり,ヨモギガリ", readme)
+        self.assertIn("サンプル作者,サンプルサクシャ", readme)
         self.assertIn("--dry-run", readme)
         self.assertIn("UTF-8 BOM", readme)
 

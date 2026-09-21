@@ -54,13 +54,13 @@ class ReadingValidationR06Test(unittest.TestCase):
             sys.modules["sudachipy"] = cls.previous_sudachi
 
     def test_partial_unconverted_reading_is_invalid(self):
-        self.assertFalse(self.module.is_complete_katakana_reading("オオヌマタカシ揮"))
-        self.assertTrue(self.module.is_complete_katakana_reading("オオヌマタカシキ"))
+        self.assertFalse(self.module.is_complete_katakana_reading("シケンサクシャ残"))
+        self.assertTrue(self.module.is_complete_katakana_reading("シケンサクシャ"))
         self.assertFalse(self.module.is_complete_katakana_reading(""))
 
     def test_partial_unconverted_sudachi_result_marks_row_as_unclassified(self):
         fake_dictionary = mock.Mock()
-        fake_dictionary.create.return_value = _Tokenizer("オオヌマタカシ揮")
+        fake_dictionary.create.return_value = _Tokenizer("シケンサクシャ残")
 
         fake_dictionary_module = types.SimpleNamespace(
             Dictionary=mock.Mock(return_value=fake_dictionary)
@@ -72,28 +72,28 @@ class ReadingValidationR06Test(unittest.TestCase):
         )
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            filename = "[大沼隆揮] sample.epub"
+            filename = "[試験作者] sample.epub"
             (Path(temp_dir) / filename).write_text("sample", encoding="utf-8")
             with mock.patch.object(self.module, "dictionary", fake_dictionary_module):
                 with mock.patch.object(self.module, "tokenizer", fake_tokenizer_module):
                     rows = self.module.build_book_list_rows(temp_dir)
 
         self.assertEqual(rows[0][0], "!!")
-        self.assertEqual(rows[0][2], "オオヌマタカシ揮")
-        self.assertEqual(rows[0][4], "大沼隆揮")
+        self.assertEqual(rows[0][2], "シケンサクシヤ残")
+        self.assertEqual(rows[0][4], "試験作者")
 
     def test_reading_dictionary_can_correct_partial_unconverted_reading(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            filename = "[大沼隆揮] sample.epub"
+            filename = "[試験作者] sample.epub"
             (Path(temp_dir) / filename).write_text("sample", encoding="utf-8")
             rows = self.module.build_book_list_rows(
                 temp_dir,
-                reading_dict={"大沼隆揮": "オオヌマタカシキ"},
+                reading_dict={"試験作者": "シケンサクシャ"},
             )
 
         self.assertNotEqual(rows[0][0], "!!")
-        self.assertEqual(rows[0][2], "オオヌマタカシキ")
-        self.assertEqual(rows[0][3], "オオヌマタカシキ")
+        self.assertEqual(rows[0][2], "シケンサクシヤ")
+        self.assertEqual(rows[0][3], "シケンサクシャ")
 
 
 if __name__ == "__main__":

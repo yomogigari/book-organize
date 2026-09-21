@@ -39,8 +39,8 @@ class MakeBookListBaselineTest(unittest.TestCase):
         cls.module = load_script()
 
     def test_extract_name_uses_first_bracket_and_stops_before_cross(self):
-        filename = "(一般コミック) [蓬がり×よもーぎ] サンプル 第01巻.zip"
-        self.assertEqual(self.module.extract_name(filename), "蓬がり")
+        filename = "(一般コミック) [サンプル作者×共同作者] サンプル 第01巻.zip"
+        self.assertEqual(self.module.extract_name(filename), "サンプル作者")
 
     def test_extract_name_normalizes_full_width_latin_characters(self):
         self.assertEqual(self.module.extract_name("[ＡＢＣ] sample.epub"), "ABC")
@@ -49,12 +49,12 @@ class MakeBookListBaselineTest(unittest.TestCase):
         self.assertEqual(self.module.extract_name("作者名なし.epub"), "!!")
 
     def test_normalize_katakana_preserves_current_rules(self):
-        self.assertEqual(self.module.normalize_katakana("ヨモギガリ"), "ヨモキカリ")
+        self.assertEqual(self.module.normalize_katakana("サンプルサクシャ"), "サンフルサクシヤ")
         self.assertEqual(self.module.normalize_katakana("キャット"), "キヤツト")
 
     def test_group_string_uses_first_two_normalized_kana_groups(self):
         self.assertEqual(
-            self.module.build_group_string("ヨモキカリ", "ヨモギガリ"),
+            self.module.build_group_string("ヨモキカリ", "サンプルサクシャ"),
             "ヤマ",
         )
         self.assertEqual(

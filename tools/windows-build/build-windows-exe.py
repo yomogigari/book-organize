@@ -182,16 +182,16 @@ def make_sample_input(output_root: Path) -> tuple[Path, Path]:
     sample_dir.mkdir(parents=True)
 
     for name in (
-        "[香月美夜] 本好きサンプル.epub",
-        "[大沼隆揮] 読み補正サンプル.epub",
-        "(一般コミック) [蓬がり×よもーぎ] サンプル.zip",
+        "[架空作者] 通常分類サンプル.epub",
+        "[試験作者] 読み補正サンプル.epub",
+        "(一般コミック) [サンプル作者×共同作者] サンプル.zip",
     ):
         (sample_dir / name).write_bytes(b"")
 
     reading_dict = output_root / "verification" / "author-readings.csv"
     reading_dict.write_text(
-        "大沼隆揮,オオヌマタカシキ\n"
-        "蓬がり,ヨモギガリ\n",
+        "試験作者,シケンサクシャ\n"
+        "サンプル作者,サンプルサクシャ\n",
         encoding="utf-8",
         newline="\n",
     )

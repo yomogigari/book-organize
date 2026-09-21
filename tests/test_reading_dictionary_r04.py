@@ -46,26 +46,26 @@ class ReadingDictionaryR04Test(unittest.TestCase):
     def test_loads_utf8_bom_and_normalizes_author_name(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "readings.csv"
-            path.write_text("\ufeff蓬がり,ヨモギガリ\nＡＢＣ,ｴｰﾋﾞｰｼｰ\n", encoding="utf-8")
+            path.write_text("\ufeffサンプル作者,サンプルサクシャ\nＡＢＣ,ｴｰﾋﾞｰｼｰ\n", encoding="utf-8")
 
             result = self.reading_dictionary.load_reading_dictionary(path)
 
-        self.assertEqual(result["蓬がり"], "ヨモギガリ")
+        self.assertEqual(result["サンプル作者"], "サンプルサクシャ")
         self.assertEqual(result["ABC"], "エービーシー")
 
     def test_ignores_blank_lines(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "readings.csv"
-            path.write_text("\n蓬がり,ヨモギガリ\n\n", encoding="utf-8")
+            path.write_text("\nサンプル作者,サンプルサクシャ\n\n", encoding="utf-8")
 
             result = self.reading_dictionary.load_reading_dictionary(path)
 
-        self.assertEqual(result, {"蓬がり": "ヨモギガリ"})
+        self.assertEqual(result, {"サンプル作者": "サンプルサクシャ"})
 
     def test_rejects_empty_author(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "readings.csv"
-            path.write_text(",ヨモギガリ\n", encoding="utf-8")
+            path.write_text(",サンプルサクシャ\n", encoding="utf-8")
 
             with self.assertRaisesRegex(
                 self.reading_dictionary.ReadingDictionaryError,
@@ -87,7 +87,7 @@ class ReadingDictionaryR04Test(unittest.TestCase):
     def test_rejects_rows_other_than_two_columns(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "readings.csv"
-            path.write_text("蓬がり,ヨモギガリ,extra\n", encoding="utf-8")
+            path.write_text("サンプル作者,サンプルサクシャ,extra\n", encoding="utf-8")
 
             with self.assertRaisesRegex(
                 self.reading_dictionary.ReadingDictionaryError,
@@ -97,20 +97,20 @@ class ReadingDictionaryR04Test(unittest.TestCase):
 
     def test_dictionary_reading_takes_priority_over_sudachi(self):
         with tempfile.TemporaryDirectory() as temp_dir:
-            book = Path(temp_dir) / "[蓬がり] sample.epub"
+            book = Path(temp_dir) / "[サンプル作者] sample.epub"
             book.touch()
             fake_dictionary = types.SimpleNamespace(Dictionary=mock.Mock())
 
             with mock.patch.object(self.make_book_list, "dictionary", fake_dictionary):
                 rows = self.make_book_list.build_book_list_rows(
                     temp_dir,
-                    reading_dict={"蓬がり": "ヨモギガリ"},
+                    reading_dict={"サンプル作者": "サンプルサクシャ"},
                 )
 
         fake_dictionary.Dictionary.assert_not_called()
-        self.assertEqual(rows[0][2], "ヨモキカリ")
-        self.assertEqual(rows[0][3], "ヨモギガリ")
-        self.assertEqual(rows[0][4], "蓬がり")
+        self.assertEqual(rows[0][2], "サンフルサクシヤ")
+        self.assertEqual(rows[0][3], "サンプルサクシャ")
+        self.assertEqual(rows[0][4], "サンプル作者")
 
     def test_unregistered_author_uses_sudachi(self):
         token = mock.Mock()
@@ -137,7 +137,7 @@ class ReadingDictionaryR04Test(unittest.TestCase):
                 ):
                     rows = self.make_book_list.build_book_list_rows(
                         temp_dir,
-                        reading_dict={"蓬がり": "ヨモギガリ"},
+                        reading_dict={"サンプル作者": "サンプルサクシャ"},
                     )
 
         fake_dictionary.Dictionary.assert_called_once_with(dict="full")
@@ -145,7 +145,7 @@ class ReadingDictionaryR04Test(unittest.TestCase):
 
     def test_list_command_passes_reading_dictionary(self):
         rows = [["ヤマ", "sample.epub"]]
-        readings = {"蓬がり": "ヨモギガリ"}
+        readings = {"サンプル作者": "サンプルサクシャ"}
         with mock.patch.object(
             self.cli,
             "load_reading_dictionary",
@@ -183,7 +183,7 @@ class ReadingDictionaryR04Test(unittest.TestCase):
 
     def test_run_command_passes_reading_dictionary(self):
         rows = [["ヤマ", "sample.epub"]]
-        readings = {"蓬がり": "ヨモギガリ"}
+        readings = {"サンプル作者": "サンプルサクシャ"}
         with mock.patch.object(
             self.cli,
             "load_reading_dictionary",
