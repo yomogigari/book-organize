@@ -203,7 +203,7 @@ Windows standalone EXEのビルドツールは、このリポジトリの `tools
 .\tools\windows-build\build-windows-exe.ps1
 ```
 
-ビルドツールはNuitka 4.2.1とMinGW64を使用し、SudachiPyとSudachiDict-fullを含むstandalone配布物を生成します。ビルド後はPython版とEXE版の分類結果も自動比較します。
+ビルドツールはNuitka 4.2.1とMinGW64を使用し、SudachiPyとSudachiDict-fullを含むstandaloneまたはonefile EXEを生成します。ビルド後はPython版とEXE版の分類結果も自動比較します。onefileではキャッシュ展開と初回・2回目の実行時間も検証します。
 
 詳細は `tools\windows-build\README.md` を参照してください。
 

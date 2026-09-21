@@ -8,10 +8,13 @@ import platform
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
 NUITKA_VERSION = "4.2.1"
+ONEFILE_CACHE_SPEC = "{CACHE_DIR}/book-organize/v1.0"
+ONEFILE_CACHE_RELATIVE = Path("book-organize") / "v1.0"
 
 
 def run(
@@ -43,6 +46,20 @@ def run(
     return proc
 
 
+def run_timed(
+    args: list[str],
+    *,
+    cwd: Path,
+    capture: bool = False,
+) -> tuple[subprocess.CompletedProcess[bytes], float]:
+    """コマンド実行時間を秒単位で計測する。"""
+    started = time.perf_counter()
+    proc = run(args, cwd=cwd, capture=capture)
+    elapsed = time.perf_counter() - started
+    print(f"Elapsed: {elapsed:.3f} sec")
+    return proc, elapsed
+
+
 def decode_output(data: bytes) -> str:
     """Windows上の外部コマンド出力を診断表示用に文字列化する。"""
     candidates = ("utf-8", locale.getpreferredencoding(False), "cp932")
@@ -70,7 +87,6 @@ def find_repo_root(explicit: str | None) -> Path:
     if explicit:
         return Path(explicit).resolve()
 
-    # tools/windows-build/build-windows-exe.py からリポジトリルートを求める。
     return Path(__file__).resolve().parents[2]
 
 
@@ -220,29 +236,17 @@ def python_baseline(
         cwd=repo,
         capture=True,
     )
-    (output_root / "verification" / "python-run.stdout.log").write_bytes(proc.stdout)
-    (output_root / "verification" / "python-run.stderr.log").write_bytes(proc.stderr)
+    verification = output_root / "verification"
+    (verification / "python-run.stdout.log").write_bytes(proc.stdout)
+    (verification / "python-run.stderr.log").write_bytes(proc.stderr)
     return csv_path, proc.stdout
 
 
-def build_standalone(repo: Path, output_root: Path) -> Path:
-    build_root = output_root / "nuitka"
-    build_root.mkdir(parents=True)
+def common_nuitka_options(repo: Path, output_root: Path) -> list[str]:
     report = output_root / "nuitka-report.xml"
-
-    env = make_build_env(repo)
-    command = [
-        "uv",
-        "run",
-        "--with",
-        f"nuitka=={NUITKA_VERSION}",
-        "python",
-        "-m",
-        "nuitka",
-        "--mode=standalone",
+    return [
         "--mingw64",
         "--assume-yes-for-downloads",
-        f"--output-dir={build_root}",
         "--output-filename=book-organize.exe",
         "--include-package=book_organize",
         "--include-package=sudachipy",
@@ -254,25 +258,85 @@ def build_standalone(repo: Path, output_root: Path) -> Path:
         f"--report={report}",
         str(repo / "book-organize.py"),
     ]
+
+
+def build_executable(repo: Path, output_root: Path, mode: str) -> Path:
+    build_root = output_root / "nuitka"
+    build_root.mkdir(parents=True)
+
+    env = make_build_env(repo)
+    command = [
+        "uv",
+        "run",
+        "--with",
+        f"nuitka=={NUITKA_VERSION}",
+        "python",
+        "-m",
+        "nuitka",
+        f"--mode={mode}",
+        f"--output-dir={build_root}",
+    ]
+
+    if mode == "onefile":
+        command.extend(
+            [
+                "--onefile-cache-mode=cached",
+                f"--onefile-tempdir-spec={ONEFILE_CACHE_SPEC}",
+            ]
+        )
+
+    command.extend(common_nuitka_options(repo, output_root))
     run(command, cwd=repo, env=env)
 
-    candidates = [
-        path
-        for path in build_root.rglob("book-organize.exe")
-        if path.parent.name.endswith(".dist")
-    ]
+    if mode == "standalone":
+        candidates = [
+            path
+            for path in build_root.rglob("book-organize.exe")
+            if path.parent.name.endswith(".dist")
+        ]
+    else:
+        direct = build_root / "book-organize.exe"
+        candidates = [direct] if direct.is_file() else []
+        if not candidates:
+            candidates = [
+                path
+                for path in build_root.rglob("book-organize.exe")
+                if not path.parent.name.endswith(".dist")
+            ]
+
     if len(candidates) != 1:
         found = "\n".join(f"  {path}" for path in candidates) or "  <none>"
         raise RuntimeError(
-            "ERROR expected exactly one standalone executable, found:\n" + found
+            f"ERROR expected exactly one {mode} executable, found:\n" + found
         )
 
     exe = candidates[0]
-    print(f"Standalone EXE: {exe}")
+    print(f"{mode.capitalize()} EXE: {exe}")
     return exe
 
 
-def verify_dictionary(exe: Path) -> Path:
+def verify_help(repo: Path, output_root: Path, exe: Path, prefix: str) -> None:
+    verification = output_root / "verification"
+    help_proc = run([str(exe), "-h"], cwd=repo, capture=True)
+    (verification / f"{prefix}-help.stdout.log").write_bytes(help_proc.stdout)
+    (verification / f"{prefix}-help.stderr.log").write_bytes(help_proc.stderr)
+
+    for token in (b"--dry-run", b"--reading-dict", b"--first-dir", b"--csv"):
+        if token not in help_proc.stdout:
+            raise RuntimeError(
+                f"ERROR EXE help does not contain {token.decode('ascii')}."
+            )
+
+
+def verify_standalone(
+    repo: Path,
+    output_root: Path,
+    exe: Path,
+    sample_dir: Path,
+    reading_dict: Path,
+    python_csv: Path,
+    python_run_stdout: bytes,
+) -> tuple[Path, str]:
     candidates = list(exe.parent.rglob("system.dic"))
     if not candidates:
         raise RuntimeError(
@@ -284,7 +348,6 @@ def verify_dictionary(exe: Path) -> Path:
         if "sudachidict_full" in str(path).lower()
     ]
     system_dic = preferred[0] if preferred else candidates[0]
-
     if system_dic.stat().st_size <= 0:
         raise RuntimeError("ERROR included system.dic is empty.")
 
@@ -292,31 +355,11 @@ def verify_dictionary(exe: Path) -> Path:
         f"Included dictionary: {system_dic} "
         f"({system_dic.stat().st_size:,} bytes)"
     )
-    return system_dic
 
+    verify_help(repo, output_root, exe, "standalone")
 
-def verify_executable(
-    repo: Path,
-    output_root: Path,
-    exe: Path,
-    sample_dir: Path,
-    reading_dict: Path,
-    python_csv: Path,
-    python_run_stdout: bytes,
-) -> str:
     verification = output_root / "verification"
-
-    help_proc = run([str(exe), "-h"], cwd=repo, capture=True)
-    (verification / "exe-help.stdout.log").write_bytes(help_proc.stdout)
-    (verification / "exe-help.stderr.log").write_bytes(help_proc.stderr)
-
-    for token in (b"--dry-run", b"--reading-dict", b"--first-dir", b"--csv"):
-        if token not in help_proc.stdout:
-            raise RuntimeError(
-                f"ERROR EXE help does not contain {token.decode('ascii')}."
-            )
-
-    exe_csv = verification / "exe-list.csv"
+    exe_csv = verification / "standalone-list.csv"
     run(
         [
             str(exe),
@@ -330,9 +373,10 @@ def verify_executable(
         ],
         cwd=repo,
     )
-
     if python_csv.read_bytes() != exe_csv.read_bytes():
-        raise RuntimeError("ERROR Python and EXE list CSV outputs are different.")
+        raise RuntimeError(
+            "ERROR Python and EXE list CSV outputs are different (standalone)."
+        )
 
     run_proc = run(
         [
@@ -347,15 +391,134 @@ def verify_executable(
         cwd=repo,
         capture=True,
     )
-    (verification / "exe-run.stdout.log").write_bytes(run_proc.stdout)
-    (verification / "exe-run.stderr.log").write_bytes(run_proc.stderr)
-
+    (verification / "standalone-run.stdout.log").write_bytes(run_proc.stdout)
+    (verification / "standalone-run.stderr.log").write_bytes(run_proc.stderr)
     if python_run_stdout != run_proc.stdout:
         raise RuntimeError(
-            "ERROR Python and EXE run --dry-run stdout are different."
+            "ERROR Python and EXE run --dry-run stdout are different (standalone)."
         )
 
-    return hashlib.sha256(exe.read_bytes()).hexdigest()
+    return system_dic, hashlib.sha256(exe.read_bytes()).hexdigest()
+
+
+def get_onefile_cache_dir() -> Path:
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if not local_app_data:
+        raise RuntimeError("ERROR LOCALAPPDATA is not defined.")
+    return Path(local_app_data) / ONEFILE_CACHE_RELATIVE
+
+
+def find_cached_system_dic(cache_dir: Path) -> Path:
+    candidates = list(cache_dir.rglob("system.dic"))
+    if not candidates:
+        raise RuntimeError(
+            "ERROR system.dic was not extracted into the onefile cache."
+        )
+
+    preferred = [
+        path for path in candidates
+        if "sudachidict_full" in str(path).lower()
+    ]
+    system_dic = preferred[0] if preferred else candidates[0]
+    if system_dic.stat().st_size <= 0:
+        raise RuntimeError("ERROR cached system.dic is empty.")
+    return system_dic
+
+
+def verify_onefile(
+    repo: Path,
+    output_root: Path,
+    exe: Path,
+    sample_dir: Path,
+    reading_dict: Path,
+    python_csv: Path,
+    python_run_stdout: bytes,
+) -> dict[str, object]:
+    verification = output_root / "verification"
+    cache_dir = get_onefile_cache_dir()
+
+    if cache_dir.exists():
+        print(f"Remove onefile cache before first run: {cache_dir}")
+        shutil.rmtree(cache_dir)
+
+    first_csv = verification / "onefile-list-first.csv"
+    _, first_seconds = run_timed(
+        [
+            str(exe),
+            "list",
+            "--dir",
+            str(sample_dir),
+            "--reading-dict",
+            str(reading_dict),
+            "--out",
+            str(first_csv),
+        ],
+        cwd=repo,
+    )
+
+    if not cache_dir.is_dir():
+        raise RuntimeError(
+            f"ERROR onefile cache directory was not created: {cache_dir}"
+        )
+
+    system_dic = find_cached_system_dic(cache_dir)
+    print(
+        f"Cached dictionary: {system_dic} "
+        f"({system_dic.stat().st_size:,} bytes)"
+    )
+
+    second_csv = verification / "onefile-list-second.csv"
+    _, second_seconds = run_timed(
+        [
+            str(exe),
+            "list",
+            "--dir",
+            str(sample_dir),
+            "--reading-dict",
+            str(reading_dict),
+            "--out",
+            str(second_csv),
+        ],
+        cwd=repo,
+    )
+
+    for csv_path in (first_csv, second_csv):
+        if python_csv.read_bytes() != csv_path.read_bytes():
+            raise RuntimeError(
+                f"ERROR Python and EXE list CSV outputs are different (onefile): "
+                f"{csv_path.name}"
+            )
+
+    verify_help(repo, output_root, exe, "onefile")
+
+    run_proc = run(
+        [
+            str(exe),
+            "run",
+            "--dir",
+            str(sample_dir),
+            "--reading-dict",
+            str(reading_dict),
+            "--dry-run",
+        ],
+        cwd=repo,
+        capture=True,
+    )
+    (verification / "onefile-run.stdout.log").write_bytes(run_proc.stdout)
+    (verification / "onefile-run.stderr.log").write_bytes(run_proc.stderr)
+    if python_run_stdout != run_proc.stdout:
+        raise RuntimeError(
+            "ERROR Python and EXE run --dry-run stdout are different (onefile)."
+        )
+
+    return {
+        "cache_dir": cache_dir,
+        "cache_size": directory_size(cache_dir),
+        "system_dic": system_dic,
+        "first_seconds": first_seconds,
+        "second_seconds": second_seconds,
+        "exe_sha": hashlib.sha256(exe.read_bytes()).hexdigest(),
+    }
 
 
 def directory_size(path: Path) -> int:
@@ -364,10 +527,15 @@ def directory_size(path: Path) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="book-organize Windows standalone EXEをビルドして検証します。"
+        description="book-organize Windows EXEをNuitkaでビルドして検証します。"
     )
     parser.add_argument("--repo-root")
     parser.add_argument("--output-root")
+    parser.add_argument(
+        "--mode",
+        choices=("standalone", "onefile"),
+        default="standalone",
+    )
     parser.add_argument("--clean-output", action="store_true")
     parser.add_argument("--allow-dirty", action="store_true")
     args = parser.parse_args()
@@ -378,7 +546,7 @@ def main() -> int:
     output_root = (
         Path(args.output_root).resolve()
         if args.output_root
-        else repo.parent / "work" / "book-organize-windows-build-output"
+        else repo.parent / "work" / f"book-organize-windows-{args.mode}-output"
     )
 
     if output_root.exists():
@@ -390,6 +558,7 @@ def main() -> int:
         shutil.rmtree(output_root)
 
     output_root.mkdir(parents=True)
+    print(f"Mode: {args.mode}")
     print(f"Output: {output_root}")
 
     try:
@@ -418,27 +587,70 @@ def main() -> int:
             repo, output_root, sample_dir, reading_dict
         )
 
-        print("\n[4/7] Nuitka standalone build")
-        exe = build_standalone(repo, output_root)
+        print(f"\n[4/7] Nuitka {args.mode} build")
+        exe = build_executable(repo, output_root, args.mode)
 
-        print("\n[5/7] Dictionary verification")
-        system_dic = verify_dictionary(exe)
+        print(f"\n[5/7] {args.mode.capitalize()} package verification")
+        if args.mode == "standalone":
+            system_dic, exe_sha = verify_standalone(
+                repo,
+                output_root,
+                exe,
+                sample_dir,
+                reading_dict,
+                python_csv,
+                python_stdout,
+            )
+            mode_summary = (
+                "Standalone\n"
+                "----------\n"
+                f"EXE: {exe}\n"
+                f"EXE SHA-256: {exe_sha}\n"
+                f"EXE size: {exe.stat().st_size}\n"
+                f"Distribution size: {directory_size(exe.parent)}\n"
+                f"system.dic: {system_dic}\n"
+                f"system.dic size: {system_dic.stat().st_size}\n"
+            )
+        else:
+            onefile = verify_onefile(
+                repo,
+                output_root,
+                exe,
+                sample_dir,
+                reading_dict,
+                python_csv,
+                python_stdout,
+            )
+            first_seconds = float(onefile["first_seconds"])
+            second_seconds = float(onefile["second_seconds"])
+            speedup = (
+                first_seconds / second_seconds
+                if second_seconds > 0
+                else float("inf")
+            )
+            system_dic = Path(onefile["system_dic"])
+            mode_summary = (
+                "Onefile\n"
+                "-------\n"
+                f"EXE: {exe}\n"
+                f"EXE SHA-256: {onefile['exe_sha']}\n"
+                f"EXE size: {exe.stat().st_size}\n"
+                f"Cache spec: {ONEFILE_CACHE_SPEC}\n"
+                f"Cache dir: {onefile['cache_dir']}\n"
+                f"Cache size: {onefile['cache_size']}\n"
+                f"Cached system.dic: {system_dic}\n"
+                f"Cached system.dic size: {system_dic.stat().st_size}\n"
+                f"First list elapsed: {first_seconds:.3f} sec\n"
+                f"Second list elapsed: {second_seconds:.3f} sec\n"
+                f"First/second ratio: {speedup:.2f}x\n"
+            )
 
-        print("\n[6/7] EXE behavior verification")
-        exe_sha = verify_executable(
-            repo,
-            output_root,
-            exe,
-            sample_dir,
-            reading_dict,
-            python_csv,
-            python_stdout,
-        )
+        print("\n[6/7] Behavior verification complete")
 
         print("\n[7/7] Summary")
         summary = (
-            "book-organize Windows standalone build\n"
-            "=====================================\n"
+            f"book-organize Windows {args.mode} build\n"
+            f"{'=' * (29 + len(args.mode))}\n"
             f"Nuitka: {NUITKA_VERSION}\n"
             f"Repository HEAD: {git_text(repo, 'rev-parse', 'HEAD').strip()}\n"
             f"Platform: {platform.platform()}\n"
@@ -447,14 +659,7 @@ def main() -> int:
             "-------------------\n"
             f"{sudachi_report.rstrip()}\n"
             "\n"
-            "Standalone\n"
-            "----------\n"
-            f"EXE: {exe}\n"
-            f"EXE SHA-256: {exe_sha}\n"
-            f"EXE size: {exe.stat().st_size}\n"
-            f"Distribution size: {directory_size(exe.parent)}\n"
-            f"system.dic: {system_dic}\n"
-            f"system.dic size: {system_dic.stat().st_size}\n"
+            f"{mode_summary}"
             "\n"
             "Verification\n"
             "------------\n"

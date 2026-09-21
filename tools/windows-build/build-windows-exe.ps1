@@ -1,6 +1,8 @@
 ﻿param(
     [string]$RepoRoot = "",
     [string]$OutputRoot = "",
+    [ValidateSet("standalone", "onefile")]
+    [string]$Mode = "standalone",
     [switch]$CleanOutput,
     [switch]$AllowDirty
 )
@@ -9,7 +11,11 @@ $ErrorActionPreference = 'Stop'
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $Builder = Join-Path $ScriptDir 'build-windows-exe.py'
 
-$BuilderArgs = @($Builder)
+$BuilderArgs = @(
+    $Builder,
+    '--mode',
+    $Mode
+)
 
 if ($RepoRoot -ne "") {
     $BuilderArgs += @('--repo-root', $RepoRoot)
