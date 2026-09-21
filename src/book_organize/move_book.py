@@ -75,6 +75,19 @@ def process_file(row, base_dir, dry_run=False, first_dir=False):
             print(f"エラー: {filename} の処理中に問題が発生しました: {e}", file=sys.stderr)
 
 
+def process_rows(rows, base_dir, dry_run=False, first_dir=False):
+    """分類行を順番に処理する。"""
+    for row in rows:
+        if row:
+            process_file(row, base_dir, dry_run=dry_run, first_dir=first_dir)
+
+
+def read_csv_rows(csv_path):
+    """UTF-8の分類用CSVを読み込む。"""
+    with open(csv_path, 'r', encoding='utf-8') as f:
+        return list(csv.reader(f))
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='make-book-list.py が生成したCSVファイルの情報に基づいてファイルを移動するツール',
@@ -94,16 +107,8 @@ def main():
         sys.exit(1)
 
     try:
-        # CSVファイルの読み込み
-        if args.csv:
-            with open(args.csv, 'r', encoding='utf-8') as f:
-                reader = csv.reader(f)
-                for row in reader:
-                    process_file(row, args.dir, dry_run=args.dry_run, first_dir=args.first_dir)
-        else:
-            reader = csv.reader(sys.stdin)
-            for row in reader:
-                process_file(row, args.dir, dry_run=args.dry_run, first_dir=args.first_dir)
+        rows = read_csv_rows(args.csv)
+        process_rows(rows, args.dir, dry_run=args.dry_run, first_dir=args.first_dir)
     except Exception as e:
         print(f"エラー: {e}", file=sys.stderr)
         sys.exit(1)

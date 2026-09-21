@@ -125,6 +125,85 @@ def extract_name(filename: str) -> str:
     else:
         return "!!"
 
+def build_book_list_rows(target_dir, short=False):
+    """対象ディレクトリを走査し、従来CSVと同じ内容の行を返す。"""
+    if not os.path.isdir(target_dir):
+        raise NotADirectoryError(f"指定されたディレクトリ '{target_dir}' は存在しません。")
+
+    files = os.listdir(target_dir)
+
+    target_files = []
+    for f in files:
+        _, ext = os.path.splitext(f)
+        if ext.lower() in TARGET_EXTENSIONS:
+            target_files.append(f)
+
+    sudachi_cache = {}
+    names_to_process = set()
+    file_info_list = []
+    for f in target_files:
+        extracted = extract_name(f)
+        file_info_list.append((extracted, f))
+        if extracted != "!!":
+            names_to_process.add(extracted)
+
+    sudachi_tokenizer = dictionary.Dictionary(dict="full").create()
+    mode = tokenizer.Tokenizer.SplitMode.C
+
+    for name in names_to_process:
+        try:
+            tokens = sudachi_tokenizer.tokenize(name, mode)
+            raw_kana = "".join(token.reading_form() for token in tokens)
+        except Exception as e:
+            print(f"Sudachi解析エラー '{name}': {str(e)}", file=sys.stderr)
+            raw_kana = ""
+        normalized_kana = normalize_katakana(raw_kana)
+        sudachi_cache[name] = (raw_kana, normalized_kana)
+
+    output_rows = []
+    for extracted, fname in file_info_list:
+        if extracted != "!!":
+            raw_kana, normalized_kana = sudachi_cache.get(extracted, ("", ""))
+        else:
+            raw_kana, normalized_kana = ("!!", "!!")
+        head2 = normalized_kana[:2]
+        group_str = build_group_string(normalized_kana, raw_kana)
+
+        if group_str and not is_katakana(group_str):
+            group_str = "!!"
+
+        if short:
+            row = [group_str, fname]
+        else:
+            row = [group_str, head2, normalized_kana, raw_kana, extracted, fname]
+        output_rows.append(row)
+
+    if short:
+        output_rows.sort(key=lambda x: (x[0], x[1]))
+    else:
+        output_rows.sort(key=lambda x: (x[0], x[5]))
+    return output_rows
+
+
+def format_csv_rows(rows):
+    """分類行を従来形式のCSV文字列へ変換する。"""
+    output_lines = []
+    for row in rows:
+        escaped_row = [escape_csv_field(field) for field in row]
+        output_lines.append(",".join(escaped_row))
+    return "\n".join(output_lines)
+
+
+def write_csv_rows(rows, output_path=None):
+    """分類行をファイルへ保存するか、標準出力へ出力する。"""
+    output_text = format_csv_rows(rows)
+    if output_path:
+        with open(output_path, "w", encoding="utf-8") as f_out:
+            f_out.write(output_text)
+    else:
+        print(output_text)
+
+
 def main():
     try:
         parser = argparse.ArgumentParser(
@@ -135,102 +214,23 @@ def main():
         parser.add_argument('--out', type=str, help='出力先ファイル名。指定がなければ標準出力に出力')
         args = parser.parse_args()
 
-        # Windows環境でUTF-8出力を行うための設定
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding='utf-8')
 
-        target_dir = args.dir
-        if not os.path.isdir(target_dir):
-            print(f"エラー: 指定されたディレクトリ '{target_dir}' は存在しません。", file=sys.stderr)
-            sys.exit(1)
-
-        # 対象ディレクトリ内のファイル一覧取得（ファイル名のみ）
         try:
-            files = os.listdir(target_dir)
+            output_rows = build_book_list_rows(args.dir, short=args.short)
+        except NotADirectoryError:
+            print(f"エラー: 指定されたディレクトリ '{args.dir}' は存在しません。", file=sys.stderr)
+            sys.exit(1)
         except Exception as e:
             print(f"ディレクトリ読み込みエラー: {str(e)}", file=sys.stderr)
             sys.exit(1)
 
-        # 対象ファイルのみピックアップ（拡張子による判定、大小文字区別しない）
-        target_files = []
-        for f in files:
-            _, ext = os.path.splitext(f)
-            if ext.lower() in TARGET_EXTENSIONS:
-                target_files.append(f)
-
-        # キャッシュ：抽出名 → (生Sudachi出力, 正規化後カタカナ)
-        sudachi_cache = {}
-
-        # 事前に抽出する名前の集合を構築（"!!"は対象外）
-        names_to_process = set()
-        file_info_list = []  # 各要素： (extracted_name, filename)
-        for f in target_files:
-            extracted = extract_name(f)
-            file_info_list.append((extracted, f))
-            if extracted != "!!":
-                names_to_process.add(extracted)
-
-        # Sudachi の初期化 (dict="full" で初期化、分割モードは C)
-        sudachi_tokenizer = dictionary.Dictionary(dict="full").create()
-        mode = tokenizer.Tokenizer.SplitMode.C
-
-        # 一括処理に近い形でキャッシュ作成
-        for name in names_to_process:
-            try:
-                tokens = sudachi_tokenizer.tokenize(name, mode)
-                raw_kana = "".join(token.reading_form() for token in tokens)
-            except Exception as e:
-                print(f"Sudachi解析エラー '{name}': {str(e)}", file=sys.stderr)
-                raw_kana = ""
-            normalized_kana = normalize_katakana(raw_kana)
-            sudachi_cache[name] = (raw_kana, normalized_kana)
-
-        # CSV行を構築
-        output_rows = []
-        for extracted, fname in file_info_list:
-            if extracted != "!!":
-                raw_kana, normalized_kana = sudachi_cache.get(extracted, ("", ""))
-            else:
-                raw_kana, normalized_kana = ("!!", "!!")
-            # カタカナ表記の先頭2文字
-            head2 = normalized_kana[:2]
-            # グループ代表文字列を作成
-            group_str = build_group_string(normalized_kana, raw_kana)
-
-            if group_str and not is_katakana(group_str):
-                group_str = "!!"
-
-            # 各項目： group_str, head2, normalized_kana, raw_kana, extracted, ファイル名
-            if args.short:
-                row = [group_str, fname]
-            else:
-                row = [group_str, head2, normalized_kana, raw_kana, extracted, fname]
-            output_rows.append(row)
-
-        # ソート：カタカナ表記の先頭2文字およびファイル名で昇順ソート
-        if args.short:
-            output_rows.sort(key=lambda x: (x[0], x[1]))
-        else:
-            output_rows.sort(key=lambda x: (x[0], x[5]))
-
-        # 結果の出力（UTF-8）
-        output_lines = []
-        for row in output_rows:
-            # 各フィールドをエスケープしてからカンマで結合
-            escaped_row = [escape_csv_field(field) for field in row]
-            output_lines.append(",".join(escaped_row))
-
-        output_text = "\n".join(output_lines)
-
-        if args.out:
-            try:
-                with open(args.out, "w", encoding="utf-8") as f_out:
-                    f_out.write(output_text)
-            except Exception as e:
-                print(f"出力ファイル書き込みエラー: {str(e)}", file=sys.stderr)
-                sys.exit(1)
-        else:
-            print(output_text)
+        try:
+            write_csv_rows(output_rows, args.out)
+        except Exception as e:
+            print(f"出力ファイル書き込みエラー: {str(e)}", file=sys.stderr)
+            sys.exit(1)
     except Exception as e:
         print(f"予期しないエラー: {str(e)}", file=sys.stderr)
         sys.exit(1)
