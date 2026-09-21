@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.0 — Unreleased
+## v1.0 — 2026-09-22
 
 v1.0は、`book-organize` の最初の正式リリースです。
 

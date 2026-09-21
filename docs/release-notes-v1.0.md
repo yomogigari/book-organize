@@ -1,4 +1,4 @@
-# book-organize v1.0 Release Notes
+# book-organize v1.0 Release Notes (2026-09-22)
 
 v1.0は、`book-organize` の最初の正式リリースです。
 

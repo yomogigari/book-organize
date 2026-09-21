@@ -26,10 +26,11 @@ class ReleaseDocumentationR11Test(unittest.TestCase):
         self.assertIn("THIRD-PARTY-NOTICES.md", readme)
         self.assertIn("SHA256SUMS.txt", readme)
 
-    def test_changelog_has_unreleased_v1_section(self):
+    def test_changelog_has_v1_release_section(self):
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
 
-        self.assertIn("## v1.0 — Unreleased", changelog)
+        self.assertIn("## v1.0 — 2026-09-22", changelog)
+        self.assertNotIn("## v1.0 — Unreleased", changelog)
         self.assertIn("最初の正式リリース", changelog)
         self.assertIn("SudachiPy 0.6.11", changelog)
         self.assertIn("SudachiDict-full 20260723", changelog)
