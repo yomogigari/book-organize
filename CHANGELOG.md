@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### 変更
+
+- `development-standards-main.zip` の固定 snapshot を開発標準として採用し、`docs/development/PROJECT-CONTRACT.md` を Project Contract として追加して、基準点と project 固有契約を記録した。
+- README、第三者ライセンス案内、Windows build / Release tool の現行文書を開発標準の文章規則と責任分界に沿って再構成した。
+- v1.0 Release Notes と開発開始時 baseline は、確定済み履歴資料として変更対象から除外した。
+
+### 互換性
+
+- CLI の挙動、CSV format、簡易読み辞書 format、v1.0 Release asset の仕様は変更していない。
+
 ## v1.0 — 2026-09-22
 
 v1.0は、`book-organize` の最初の正式リリースです。

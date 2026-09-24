@@ -17,7 +17,7 @@ class LocalReadingDictionaryR07Test(unittest.TestCase):
     def test_readme_documents_local_dictionary_handling(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("author-readings.csv", readme)
-        self.assertIn("Gitの管理対象には含めません", readme)
+        self.assertIn("Git の管理対象には含めません", readme)
 
 
 if __name__ == "__main__":

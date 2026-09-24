@@ -54,7 +54,7 @@ class WindowsOnefileR09Test(unittest.TestCase):
         self.assertIn("-Mode onefile", readme)
         self.assertIn("{CACHE_DIR}/book-organize/v1.0", readme)
         self.assertIn("初回", readme)
-        self.assertIn("2回目", readme)
+        self.assertIn("2 回目", readme)
 
 
 if __name__ == "__main__":
