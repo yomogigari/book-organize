@@ -5,6 +5,7 @@
 ### 変更
 
 - `development-standards-main.zip` の固定 snapshot を開発標準として採用し、`docs/development/PROJECT-CONTRACT.md` を Project Contract として追加して、基準点と project 固有契約を記録した。
+- Project Contract の v1.0-r14 移行例外を commit 済み状態へ更新し、次の公開 version への revision リセット時点を `development-standards` と一致させた。
 - README、第三者ライセンス案内、Windows build / Release tool の現行文書を開発標準の文章規則と責任分界に沿って再構成した。
 - v1.0 Release Notes と開発開始時 baseline は、確定済み履歴資料として変更対象から除外した。
 

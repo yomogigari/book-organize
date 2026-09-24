@@ -44,8 +44,10 @@ class DocumentationStandardsR14Test(unittest.TestCase):
         self.assertIn("Adopted on: `2026-09-24`", text)
         self.assertIn("development-standards-main.zip", text)
         self.assertIn("v1.0-r14", text)
-        self.assertIn("次の公開 version", text)
+        self.assertIn("次の公開 version へ更新した時点", text)
         self.assertIn("新しい公開 version の `r01`", text)
+        self.assertNotIn("次の公開 version へ更新した後", text)
+        self.assertNotIn("未 commit 論理変更", text)
 
     def test_project_contract_records_conditional_applicability(self):
         text = CONTRACT.read_text(encoding="utf-8")

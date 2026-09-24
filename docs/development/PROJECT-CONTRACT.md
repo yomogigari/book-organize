@@ -122,7 +122,7 @@ Git の変更確認、tracked rename / move、push 後確認などの共通手�
 - 開発 revision: `vX.Y-rNN`
 - 公開後の最初の実変更: 原則 `vX.Y-r01`
 - 同一公開 version 内: `r02`、`r03` のように単調増加する。
-- 次の公開 version へ更新した後: 新しい公開 version の `r01` へリセットする。
+- 次の公開 version へ更新した時点: 新しい公開 version の `r01` へリセットする。
 - revision の消費条件: 実変更を開始した時点で使用し、単なるコピーでは消費しない。
 
 `-rNN` の一般規則は `development-standards` の `VERSIONING-AND-TAGS.md` を正本とします。
@@ -131,10 +131,10 @@ Git の変更確認、tracked rename / move、push 後確認などの共通手�
 
 v1.0 公開前に `v1.0-r01` から `v1.0-r13` を使用し、今回の standards 採用前に v1.0 公開後の作業を `v1.0-r14` として開始済みです。
 
-今回の未 commit 論理変更は、利用者判断により `v1.0-r14` のまま継続します。
+standards 採用時の変更は、利用者判断により既存系列の `v1.0-r14` として継続し、commit 済みです。
 v1.0 系列で後続 revision が必要な場合は、この既存系列を単調増加させます。
 
-次の公開 version へ更新した後は、この移行例外を持ち越さず、新しい公開 version の `r01` から開始します。
+次の公開 version へ更新した時点で、この移行例外を持ち越さず、新しい公開 version の `r01` から開始します。
 
 ## 9. 固定インターフェース
 
@@ -230,6 +230,6 @@ v1.0 の onefile cache path と release tool には version 固有値があり�
 ## 16. 共通標準からの例外
 
 v1.0 系列の開発 revision だけ、standards 採用時の移行例外があります。
-今回の未 commit 論理変更は `v1.0-r14` のまま継続し、次の公開 version へ更新した後から標準の `r01` リセットを適用します。
+standards 採用時の変更は既存系列の `v1.0-r14` として継続・commit 済みであり、次の公開 version へ更新した時点から標準の `r01` へのリセットを適用します。
 
 それ以外に、採用した開発標準の必須規則に対する project 固有の例外はありません。
