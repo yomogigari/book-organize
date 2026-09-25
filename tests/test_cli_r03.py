@@ -47,7 +47,7 @@ class UnifiedCliR03Test(unittest.TestCase):
         spec.loader.exec_module(module)
         self.assertEqual(module.main.__module__, "book_organize.cli")
 
-    def test_parser_provides_three_subcommands(self):
+    def test_parser_provides_expected_subcommands(self):
         parser = self.cli.create_parser()
         self.assertEqual(parser.parse_args(["list"]).command, "list")
         self.assertEqual(
@@ -55,6 +55,7 @@ class UnifiedCliR03Test(unittest.TestCase):
             "move",
         )
         self.assertEqual(parser.parse_args(["run"]).command, "run")
+        self.assertEqual(parser.parse_args(["dict"]).command, "dict")
 
     def test_list_command_generates_and_outputs_rows(self):
         rows = [["ヤマ", "sample.epub"]]

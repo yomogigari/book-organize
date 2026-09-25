@@ -9,6 +9,11 @@ import os
 import sys
 from collections.abc import Sequence
 
+from .dictionary_assistant import (
+    build_dictionary_candidates,
+    check_reading_dictionary,
+    write_dictionary_candidates,
+)
 from .make_book_list import build_book_list_rows, write_csv_rows
 from .move_book import process_rows, read_csv_rows
 from .reading_dictionary import ReadingDictionaryError, load_reading_dictionary
@@ -24,7 +29,8 @@ def create_parser() -> argparse.ArgumentParser:
             "実行例:\n"
             "  uv run book-organize.py run --dir E:\\E-book --dry-run\n"
             "  uv run book-organize.py list --dir E:\\E-book --out book-list.csv\n"
-            "  uv run book-organize.py move --dir E:\\E-book --csv book-list.csv --dry-run"
+            "  uv run book-organize.py move --dir E:\\E-book --csv book-list.csv --dry-run\n"
+            "  uv run book-organize.py dict --dir E:\\E-book --out author-readings.todo.csv"
         ),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -103,13 +109,49 @@ def create_parser() -> argparse.ArgumentParser:
     )
     _add_reading_dictionary_option(run_parser)
     _add_move_options(run_parser)
+    dict_parser = subparsers.add_parser(
+        "dict",
+        help="簡易読み辞書の作成と検査を補助します。",
+        description=(
+            "分類コードが !! の作者名を辞書候補 CSV へ出力するか、"
+            "既存の簡易読み辞書を検査します。"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "実行例:\n"
+            "  uv run book-organize.py dict --dir E:\\E-book "
+            "--out author-readings.todo.csv\n"
+            "  uv run book-organize.py dict --dir E:\\E-book "
+            "--reading-dict author-readings.csv --out author-readings.todo.csv\n"
+            "  uv run book-organize.py dict --check "
+            "--reading-dict author-readings.csv"
+        ),
+    )
+    dict_parser.add_argument(
+        "--dir",
+        type=str,
+        default=os.getcwd(),
+        help="辞書候補を抽出する対象ディレクトリ。指定がなければ起動ディレクトリを使用",
+    )
+    dict_parser.add_argument(
+        "--out",
+        type=str,
+        help="辞書候補 CSV の保存先。指定がなければ標準出力に出力",
+    )
+    dict_parser.add_argument(
+        "--check",
+        action="store_true",
+        help="--reading-dict で指定した辞書を検査",
+    )
+    _add_reading_dictionary_option(dict_parser)
     # ルートヘルプでも各サブコマンドの全オプションを確認できるよう、
     # 個別パーサーが生成するヘルプをそのまま再利用する。
     parser.epilog = (
         "サブコマンド別の完全なヘルプ:\n\n"
         f"--- run ---\n{run_parser.format_help()}\n"
         f"--- list ---\n{list_parser.format_help()}\n"
-        f"--- move ---\n{move_parser.format_help()}"
+        f"--- move ---\n{move_parser.format_help()}\n"
+        f"--- dict ---\n{dict_parser.format_help()}"
     )
 
     return parser
@@ -193,6 +235,42 @@ def _run_combined(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_dictionary(args: argparse.Namespace) -> int:
+    """簡易読み辞書の候補生成または検査を実行する。"""
+    if args.check:
+        if not args.reading_dict:
+            raise ReadingDictionaryError(
+                "dict --check には --reading-dict の指定が必要です。"
+            )
+        result = check_reading_dictionary(args.reading_dict)
+        print(f"読み辞書: {args.reading_dict}")
+        print(f"エントリ数: {result.entry_count}")
+        print(f"NORMALIZATION_MAP による変換: {len(result.normalization_changes)}")
+        for author, raw_reading, normalized_reading in result.normalization_changes:
+            print(f"  {author}: {raw_reading} -> {normalized_reading}")
+
+        if result.invalid_entries:
+            print(f"無効な読み: {len(result.invalid_entries)}", file=sys.stderr)
+            for author, raw_reading, normalized_reading in result.invalid_entries:
+                print(
+                    f"  {author}: {raw_reading} -> {normalized_reading}",
+                    file=sys.stderr,
+                )
+            print("判定: NG", file=sys.stderr)
+            return 1
+
+        print("判定: OK")
+        return 0
+
+    reading_dict = _load_optional_reading_dictionary(args.reading_dict)
+    candidates = build_dictionary_candidates(
+        args.dir,
+        reading_dict=reading_dict,
+    )
+    write_dictionary_candidates(candidates, args.out)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """引数を解析し、指定されたサブコマンドを実行する。"""
     _configure_utf8_output()
@@ -206,6 +284,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _run_move(args)
         if args.command == "run":
             return _run_combined(args)
+        if args.command == "dict":
+            return _run_dictionary(args)
     except NotADirectoryError as exc:
         print(f"エラー: {exc}", file=sys.stderr)
         return 1

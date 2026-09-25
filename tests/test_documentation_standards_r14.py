@@ -33,16 +33,9 @@ class DocumentationStandardsR14Test(unittest.TestCase):
     def test_project_contract_records_adopted_standards_snapshot(self):
         text = CONTRACT.read_text(encoding="utf-8")
 
-        self.assertIn(
-            "5ded388cc78e683689382d7feec420758a1cc382",
-            text,
-        )
-        self.assertIn(
-            "21ccf70d85c87c14895402fc99384b150b4147998bee2433e87e52df5605e540",
-            text,
-        )
+        self.assertIn("Applied baseline: 共通の開発基準", text)
         self.assertIn("Adopted on: `2026-09-24`", text)
-        self.assertIn("development-standards-main.zip", text)
+        self.assertNotIn("development-standards", text)
         self.assertIn("v1.0-r14", text)
         self.assertIn("次の公開 version へ更新した時点", text)
         self.assertIn("新しい公開 version の `r01`", text)

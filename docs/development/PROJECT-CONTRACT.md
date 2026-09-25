@@ -2,17 +2,14 @@
 
 この文書は、`book-organize` の実装を変更しても維持する開発上の契約と正本を記録します。
 
-共通の開発標準を自動追従せず、採用した immutable 基準点とこのプロジェクト固有の判断を組み合わせて使用します。
+共通の開発基準を参照し、このプロジェクト固有の判断と組み合わせて使用します。
 
-## 0. 開発標準基準点
+## 0. 開発基準
 
-- Standards source: `development-standards`
-- Adopted immutable ref: `5ded388cc78e683689382d7feec420758a1cc382`
-- Adopted snapshot / artifact filename: `development-standards-main.zip`
-- Adopted snapshot SHA-256: `21ccf70d85c87c14895402fc99384b150b4147998bee2433e87e52df5605e540`
+- Applied baseline: 共通の開発基準
 - Adopted on: `2026-09-24`
 - Project Contract: `docs/development/PROJECT-CONTRACT.md`
-- Update policy: standards の更新は自動追従せず、差分と影響を確認したうえで明示的に採用する。
+- Update policy: 開発基準の更新は自動追従せず、差分と影響を確認したうえで明示的に採用する。
 
 開発開始時の旧基準点は [../development-baseline.md](../development-baseline.md) に履歴資料として保持します。
 この履歴資料は現在の Project Contract を置き換えません。
@@ -99,7 +96,7 @@
 - Primary branch: `main`
 - Release tag: annotated tag を使用する。
 
-Git の変更確認、tracked rename / move、push 後確認などの共通手順は、採用した `development-standards` を正本とします。
+Git の変更確認、tracked rename / move、push 後確認などの共通手順は、共通の開発基準に沿って運用します。
 この Project Contract では project 固有値と例外だけを定義します。
 
 ## 7. 外部アクセス
@@ -125,14 +122,14 @@ Git の変更確認、tracked rename / move、push 後確認などの共通手�
 - 次の公開 version へ更新した時点: 新しい公開 version の `r01` へリセットする。
 - revision の消費条件: 実変更を開始した時点で使用し、単なるコピーでは消費しない。
 
-`-rNN` の一般規則は `development-standards` の `VERSIONING-AND-TAGS.md` を正本とします。
+`-rNN` の一般規則は、共通の開発基準に従います。
 
 ### v1.0 系列の移行例外
 
-v1.0 公開前に `v1.0-r01` から `v1.0-r13` を使用し、今回の standards 採用前に v1.0 公開後の作業を `v1.0-r14` として開始済みです。
+v1.0 公開前に `v1.0-r01` から `v1.0-r13` を使用し、今回の 共通の開発基準を適用する前に v1.0 公開後の作業を `v1.0-r14` として開始済みです。
 
-standards 採用時の変更は、利用者判断により既存系列の `v1.0-r14` として継続し、commit 済みです。
-v1.0 系列で後続 revision が必要な場合は、この既存系列を単調増加させます。
+`v1.0-r14` は、共通の開発基準の適用時の移行例外として番号を維持したまま commit 済みです。
+v1.0 系列の後続 revision は `v1.0-r15` 以降を単調増加させます。
 
 次の公開 version へ更新した時点で、この移行例外を持ち越さず、新しい公開 version の `r01` から開始します。
 
@@ -146,6 +143,7 @@ v1.0 系列で後続 revision が必要な場合は、この既存系列を単�
 | `run` | `uv run book-organize.py run ...` | dry-run と実移動を確認する。 |
 | `list` | `uv run book-organize.py list ...` | CSV / stdout の分類結果を確認する。 |
 | `move` | `uv run book-organize.py move ...` | CSV に従う dry-run と実移動を確認する。 |
+| `dict` | `uv run book-organize.py dict ...` | 未解決作者の候補生成と `--check` による辞書検査を確認する。 |
 | Windows EXE | `book-organize.exe ...` | Python 版との semantic / byte equality を確認する。 |
 
 v1.0 の CSV 列構成と簡易読み辞書形式は README に記載します。
@@ -184,6 +182,7 @@ README は利用者向けの入口とし、ビルド・Release の詳細は `too
 | 読み辞書 | 利用者指定。既定名 `author-readings.csv` | User-owned override | 利用者判断 | 内容確認が必要 |
 | onefile cache | `%LOCALAPPDATA%\book-organize\v1.0` | Cache | 再展開可能 | 原則不要 |
 | 分類 CSV | `--out` で利用者指定 | Generated output | 利用者判断 | 内容確認が必要 |
+| 読み辞書候補 CSV | `dict --out` で利用者指定 | Generated output | 利用者判断 | 内容確認が必要 |
 | Build output | repository の親の `work` 配下 | Generated output | 再生成可能 | 公開対象ではない |
 | Release candidate | `book-organize-v1.0-release-output` | Frozen candidate | 公開確認後に整理可能 | asset だけを公開 |
 
@@ -229,7 +228,8 @@ v1.0 の onefile cache path と release tool には version 固有値があり�
 
 ## 16. 共通標準からの例外
 
-v1.0 系列の開発 revision だけ、standards 採用時の移行例外があります。
-standards 採用時の変更は既存系列の `v1.0-r14` として継続・commit 済みであり、次の公開 version へ更新した時点から標準の `r01` へのリセットを適用します。
+v1.0 系列の開発 revision だけ、共通の開発基準の適用時の移行例外があります。
+`v1.0-r14` は移行例外として commit 済みで、v1.0 系列では `r15` 以降を単調増加させます。
+次の公開 version へ更新した時点から標準の `r01` リセットを適用します。
 
 それ以外に、採用した開発標準の必須規則に対する project 固有の例外はありません。

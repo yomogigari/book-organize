@@ -2,16 +2,23 @@
 
 ## Unreleased
 
+### 追加
+
+- `dict` サブコマンドを追加し、分類コードが `!!` で作者名を抽出できた行から簡易読み辞書の候補 CSV を生成できるようにした。
+- `dict --check` を追加し、既存の簡易読み辞書の構造と分類用正規化後の読みを検査できるようにした。
+
 ### 変更
 
-- `development-standards-main.zip` の固定 snapshot を開発標準として採用し、`docs/development/PROJECT-CONTRACT.md` を Project Contract として追加して、基準点と project 固有契約を記録した。
-- Project Contract の v1.0-r14 移行例外を commit 済み状態へ更新し、次の公開 version への revision リセット時点を `development-standards` と一致させた。
+- 簡易読み辞書の 2 列目が、NFKC 正規化後に既存の `NORMALIZATION_MAP` を通って分類される仕様を README と回帰 test で明示した。
+
+- 共通の開発基準を採用し、`docs/development/PROJECT-CONTRACT.md` を Project Contract として追加して、project 固有契約を記録した。
+- Project Contract の v1.0-r14 移行例外を commit 済み状態へ更新し、次の公開 version への revision リセット時点を開発基準に沿った方式へ変更した。
 - README、第三者ライセンス案内、Windows build / Release tool の現行文書を開発標準の文章規則と責任分界に沿って再構成した。
 - v1.0 Release Notes と開発開始時 baseline は、確定済み履歴資料として変更対象から除外した。
 
 ### 互換性
 
-- CLI の挙動、CSV format、簡易読み辞書 format、v1.0 Release asset の仕様は変更していない。
+- 既存の `run` / `list` / `move` の挙動、分類 CSV format、簡易読み辞書 format、v1.0 Release asset の仕様は変更していない。
 
 ## v1.0 — 2026-09-22
 

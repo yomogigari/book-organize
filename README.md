@@ -7,11 +7,12 @@ SudachiPy の結果を補正したい場合は、作者名と読みを記述し�
 
 ## 主な機能
 
-`book-organize` は、次の 3 つのサブコマンドを提供します。
+`book-organize` は、次の 4 つのサブコマンドを提供します。
 
 - `run`: 分類情報を生成し、その結果を使ってファイルを移動する。
 - `list`: ファイルを移動せず、分類情報を CSV または標準出力へ出力する。
 - `move`: `list` で生成した既存 CSV に従ってファイルを移動する。
+- `dict`: `author-readings.csv` の作成候補を生成するか、既存辞書を検査する。
 
 `run` と `move` は `--dry-run` に対応します。
 実際にファイルを移動する前に、移動予定を確認できます。
@@ -60,7 +61,7 @@ uv sync
 ## 最初の実行
 
 最初にルートヘルプを確認します。
-ルートヘルプには `run`、`list`、`move` の主要オプションも表示します。
+ルートヘルプには `run`、`list`、`move`、`dict` の主要オプションも表示します。
 
 ```powershell
 uv run book-organize.py -h
@@ -139,12 +140,40 @@ uv run book-organize.py move --dir E:\E-book --csv book-list.csv --dry-run
 uv run book-organize.py move --dir E:\E-book --csv book-list.csv
 ```
 
+### `dict`: 簡易読み辞書の作成を補助する
+
+`dict` は、分類コードが `!!` になった行のうち、作者名を抽出できたものだけを重複なく取り出します。
+作者名を抽出できず作者名自体が `!!` の行は、読み辞書では補正できないため候補から除外します。
+
+候補 CSV は `author-readings.csv` と同じ 2 列形式で、2 列目を空欄にして出力します。
+利用者は 2 列目へ読みを入力してから、必要な行を `author-readings.csv` へ反映できます。
+
+```powershell
+uv run book-organize.py dict --dir E:\E-book --out author-readings.todo.csv
+```
+
+既存の読み辞書を指定すると、その辞書を適用した後も分類コードが `!!` の作者だけを候補に残します。
+
+```powershell
+uv run book-organize.py dict --dir E:\E-book --reading-dict author-readings.csv --out author-readings.todo.csv
+```
+
+既存辞書の構造と読みを検査する場合は `--check` を指定します。
+
+```powershell
+uv run book-organize.py dict --check --reading-dict author-readings.csv
+```
+
+`--check` は、列数、空欄、重複作者など既存の辞書検証に加え、読みへ `NORMALIZATION_MAP` を適用した後もカタカナとして分類できるかを確認します。
+正規化で読みが変わる場合は、変換前後も表示します。
+
 各サブコマンドのヘルプは個別にも確認できます。
 
 ```powershell
 uv run book-organize.py run -h
 uv run book-organize.py list -h
 uv run book-organize.py move -h
+uv run book-organize.py dict -h
 ```
 
 ## 簡易読み辞書
@@ -168,6 +197,10 @@ UTF-8 と UTF-8 BOM 付き CSV を読み込めます。
 
 作者名はファイル名から抽出した後に NFKC で正規化して比較します。
 辞書に一致した作者名は、SudachiPy で解析せず辞書の読みを使用します。
+
+辞書の 2 列目の読みは、読み込み時に NFKC で正規化します。
+分類時には SudachiPy 由来の読みと同じ `NORMALIZATION_MAP` を適用し、濁音、半濁音、拗音、促音などを分類用の表記へそろえます。
+辞書ファイル自体は自動で書き換えません。
 
 ```powershell
 uv run book-organize.py list --dir E:\E-book --reading-dict author-readings.csv --out book-list.csv
